@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./support.js"></script>
+    <title>Answer</title>
+</head>
+<body>
+    <button onclick="redirectToPage('index.html')">Back</button>
+</body>
+<script>
+    let convertAnswerFormToObjects = (answerForm) =>{
+        // Validation fields
+        let result = [];
+
+        let allAnswerFields = document.getElementsByClassName('answer');
+
+        for(let answerField of allAnswerFields)
+        {
+            // Don't do this
+            let valueFromField = answerField.value;
+            let answerObject = new Answer(valueFromField);
+            result.push(answerObject);
+        }
+
+        return result;
+    }
+
+    let renderAnswerForm = (questions) =>{
+        let answerForm = document.createElement('div');
+
+        for(let question of questions)
+        {
+            let questionLabel = document.createElement('h2');
+            questionLabel.innerText = question.Text;
+            answerForm.appendChild(questionLabel);
+
+            switch(question.FieldType)
+            {
+                case 'int':
+                    let intInputField = document.createElement('input');
+                    intInputField.setAttribute('type', 'number');
+                    intInputField.classList.add('answer');
+                    answerForm.appendChild(intInputField);
+            }
+        }
+
+        let answerFormSubmitBtn = document.createElement('button');
+        answerFormSubmitBtn.innerText = 'Submit';
+        answerFormSubmitBtn.addEventListener('click', () =>{
+            let result = convertAnswerFormToObjects(answerForm);
+
+            let xhr = new XMLHttpRequest();
+            xhr.open('POST', 'http://localhost:8080/resume/answers', false);
+            xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+            xhr.send(JSON.stringify(result));
+
+            let serverAnswer = xhr.response;
+
+            alert(`Status: ${serverAnswer}`);
+
+            if(serverAnswer == 'success')
+            {
+                redirectToPage('user.html');
+            }
+        });
+        answerForm.appendChild(answerFormSubmitBtn);
+
+        document.body.appendChild(answerForm);
+    }
+
+    let getResumeQuestions = (resumeName) =>{
+        try
+        {
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', `http://localhost:8080/resume/questions?name=${resumeName}`, false);
+            xhr.send();
+
+            const resumeQuestions  = JSON.parse(xhr.response);
+            renderAnswerForm(resumeQuestions);
+        }
+        catch(error)
+        {
+            console.log(`Error in getResumeQuestions: ${error.message}`);
+        }
+    }
+
+    const currentUrl = new URL(window.location.href);
+    const urlParams = new URLSearchParams(currentUrl.search);
+    if(urlParams.has('resumeName'))
+    {
+        const resumeName = urlParams.get('resumeName');
+        getResumeQuestions(resumeName);
+    }
+</script>
+</html>
